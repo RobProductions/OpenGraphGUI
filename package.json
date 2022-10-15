@@ -1,0 +1,20 @@
+{
+  "name": "com.robproductions.opengraphgui",
+  "version": "0.1.0",
+  "displayName": "Open Graph GUI",
+  "description": "An open-source Editor GUI for use with URP ShaderGraphs in Unity, aiming to clean up the look of Material Properties while providing ease-of-use via tagging.",
+  "unity": "2020.3",
+  "changelogUrl": "https://github.com/RobProductions/OpenGraphGUI",
+  "licensesUrl": "https://github.com/RobProductions/OpenGraphGUI/blob/main/LICENSE",
+  "license": "MIT License",
+  "keywords": [
+    "shader",
+	"graph",
+	"editor",
+	"gui"
+  ],
+  "author": {
+    "name": "RobProductions",
+    "url": "https://github.com/RobProductions"
+  }
+}
