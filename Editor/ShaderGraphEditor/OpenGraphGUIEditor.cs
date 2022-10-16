@@ -13,18 +13,6 @@ using UnityEditor;
 public class RPOpenGraphGUI : RobProductions.OpenGraphGUI.Editor.OpenGraphGUIEditor
 {
 	//Leave empty to inherit all default methods + properties
-
-	public RPOpenGraphGUI()
-	{
-		renderExtensions = new Dictionary<string, System.Action<MaterialEditor, MaterialProperty>>();
-		renderExtensions.Add("CustomRender", RenderTest);
-	}
-
-	void RenderTest(MaterialEditor editor, MaterialProperty v)
-	{
-		//Your custom handler GUI here ->
-		editor.DefaultShaderProperty(v, "Proof that it renders extension");
-	}
 }
 
 namespace RobProductions.OpenGraphGUI.Editor
@@ -54,15 +42,26 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// <summary>
 		/// Amount of tab spacing for single line texture property.
 		/// </summary>
-		const float singleLineTexTabSpace = 3f;
+		const float singleLineTexTabSpace = 2f;
+
+		const string centeredSpacingName = "[centered]";
+		const string rightBoundSpacingName = "[rightbound]";
 
 		const string labelPrefix = "*";
 		const string singleLineTexPrefix = "%";
 		const string dependentVisibleTextPrefix = "^";
 		const string linkedPropertyPrefix = "&";
 
+		class LinkedProperty
+		{
+			public MaterialProperty matProperty;
+			public int propIndex;
+			public bool wasRendered = false;
+		}
+
 		private MaterialEditor matEditor;
-		private Dictionary<string, MaterialProperty> currentLinkedProperties = new Dictionary<string, MaterialProperty>();
+		private Dictionary<string, LinkedProperty> currentLinkedProperties = new Dictionary<string, LinkedProperty>();
+		private bool zeroWidthMode = false;
 
 		protected Dictionary<string, System.Action<MaterialEditor, MaterialProperty>> renderExtensions = null;
 
@@ -82,21 +81,54 @@ namespace RobProductions.OpenGraphGUI.Editor
 		{
 			matEditor = materialEditor;
 			Material material = materialEditor.target as Material;
-			
 
-			//Set the width of the left side to be current size minus some constant pixel value
-			//This seems to be how the default ShaderGUI for ShaderGraphs is handled
-			EditorGUIUtility.labelWidth = EditorGUIUtility.currentViewWidth - rightValueBoxSize;
+			zeroWidthMode = false;
+			SetUtilityLabelWidth();
 
 			RenderPropertiesList(properties);
 
 			RenderBottomOptions();
 		}
 
+		/// <summary>
+		/// Render the list of properties that are given by the Shader.
+		/// This function iterates across each MaterialProperty and determines
+		/// how it should be rendered using the OpenGraphGUI tags
+		/// if any pop up in the property display names.
+		/// </summary>
+		/// <param name="properties"></param>
 		void RenderPropertiesList(MaterialProperty[] properties)
 		{
+			//Track if the last property was non-texture type or
+			//contained a non-null input texture
 			bool lastWasPopulated = true;
 
+			//First do an initial iteration to find linked properties
+			currentLinkedProperties.Clear();
+			for (int i = 0; i < properties.Length; i++)
+			{
+				var thisProp = properties[i];
+
+				if (thisProp.flags.HasFlag(MaterialProperty.PropFlags.HideInInspector))
+				{
+					//Don't account for this property since it's meant to be hidden
+					continue;
+				}
+
+				if(thisProp.displayName.StartsWith(linkedPropertyPrefix))
+				{
+					//This is a linked property, so add it to the dictionary
+
+					var link = new LinkedProperty();
+					link.matProperty = thisProp;
+					link.propIndex = i;
+					link.wasRendered = false;
+
+					currentLinkedProperties.Add(thisProp.displayName, link);
+				}
+			}
+
+			//Now iterate across the properties for real and render them
 			for (int i = 0; i < properties.Length; i++)
 			{
 				var thisProp = properties[i];
@@ -116,9 +148,38 @@ namespace RobProductions.OpenGraphGUI.Editor
 				else
 				{
 					var propName = thisProp.displayName;
+					var lowerPropName = propName.ToLower();
 
-					//Check the initial type of the property
-					if(propName.StartsWith(labelPrefix))
+					//Check the initial type of the property based on name
+					if(lowerPropName == centeredSpacingName)
+					{
+						//Use center spacing and don't render this property
+						SetZeroWidthMode(true);
+					}
+					else if (lowerPropName == rightBoundSpacingName)
+					{
+						//Use right bound spacing and don't render this property
+						SetZeroWidthMode(false);
+					}
+					else if(currentLinkedProperties.ContainsKey(propName))
+					{
+						//This is a linked property, so check if it was rendered already
+						var thisLinkedProp = currentLinkedProperties[propName];
+						if(thisLinkedProp.wasRendered)
+						{
+							//It was drawn already by some the link parent
+						}
+						else
+						{
+							//Was not drawn?!
+							//That's a warning since it's expected to have had a parent render it
+							GraphLog("Linked property was not drawn by parent." +
+								"Ensure that a single line texture property (" + singleLineTexPrefix + ") precedes this item - " 
+								+ propName);
+							RenderVisibleProperty(thisLinkedProp.matProperty, propName, i);
+						}
+					}
+					else if(propName.StartsWith(labelPrefix))
 					{
 						//This is a label type, so show a bold header instead of the property
 
@@ -187,6 +248,10 @@ namespace RobProductions.OpenGraphGUI.Editor
 			SetUtilityLabelWidth(dependentVisibleTabSpace);
 			//Render the property like we would any other
 			RenderVisibleProperty(v, labelName, index);
+
+			//Add in flexible space to separate the fields just in case
+			//we're in the centered mode
+			GUILayout.FlexibleSpace();
 			//Reset the label width
 			SetUtilityLabelWidth();
 
@@ -207,16 +272,42 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 			if(labelName.StartsWith(singleLineTexPrefix))
 			{
-				//This is a single line texture type
+				if(v.type == MaterialProperty.PropType.Texture)
+				{
+					//This is a single line texture type
 
-				//Trim the single line tex prefix
-				labelName = labelName.Substring(singleLineTexPrefix.Length);
+					//Trim the single line tex prefix
+					labelName = labelName.Substring(singleLineTexPrefix.Length);
 
-				EditorGUILayout.BeginHorizontal();
-				EditorGUILayout.Space(singleLineTexTabSpace);
-				matEditor.TexturePropertySingleLine(new GUIContent(labelName), v);
-				EditorGUILayout.EndHorizontal();
-				EditorGUILayout.Space(2f);
+					EditorGUILayout.BeginHorizontal();
+					EditorGUILayout.Space(singleLineTexTabSpace);
+					//Adjust label width to compensate
+					SetUtilityLabelWidth(singleLineTexTabSpace + 5f);
+					//Look for a linked property that sits on the same line
+					var link = FindLinkedPropertyWithIndex(index + 1);
+					if (link != null)
+					{
+						matEditor.TexturePropertySingleLine(new GUIContent(labelName), v, link.matProperty);
+						link.wasRendered = true;
+					}
+					else
+					{
+						matEditor.TexturePropertySingleLine(new GUIContent(labelName), v);
+					}
+					//Add flexible space for the centered mode
+					GUILayout.FlexibleSpace();
+					//End the horizontal line
+					EditorGUILayout.EndHorizontal();
+					SetUtilityLabelWidth();
+					EditorGUILayout.Space(2f);
+				}
+				else
+				{
+					//Labeled as a single line tex type, but not a texture
+					GraphLog("Property was labeled as a single line texture (" + singleLineTexPrefix
+						+ "), but not a texture type - " + labelName);
+					RenderDefaultPropertyView(v, labelName);
+				}
 			}
 			else
 			{
@@ -262,9 +353,30 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 		//EDITOR GUI
 
+		/// <summary>
+		/// Set whether to use centered or right bound spacing in the GUI.
+		/// </summary>
+		/// <param name="v"></param>
+		void SetZeroWidthMode(bool v)
+		{
+			zeroWidthMode = v;
+			SetUtilityLabelWidth();
+		}
+
 		void SetUtilityLabelWidth(float offset = 0f)
 		{
-			EditorGUIUtility.labelWidth = EditorGUIUtility.currentViewWidth - rightValueBoxSize - offset;
+			if(zeroWidthMode)
+			{
+				//Set the width to "default"
+				//Which seems to be how the non-ShaderGraph built-in URP materials are handled
+				EditorGUIUtility.labelWidth = 0f;
+			}
+			else
+			{
+				//Set the width of the left side to be current size minus some constant pixel value
+				//This seems to be how the default ShaderGUI for ShaderGraphs is handled
+				EditorGUIUtility.labelWidth = EditorGUIUtility.currentViewWidth - rightValueBoxSize - offset;
+			}
 		}
 
 		void SetUtilityFieldWidth(float size)
@@ -273,6 +385,19 @@ namespace RobProductions.OpenGraphGUI.Editor
 		}
 
 		//UTILITY
+
+		LinkedProperty FindLinkedPropertyWithIndex(int index)
+		{
+			foreach(string thisKey in currentLinkedProperties.Keys)
+			{
+				if(currentLinkedProperties[thisKey].propIndex == index)
+				{
+					return currentLinkedProperties[thisKey];
+				}
+			}
+
+			return null;
+		}
 
 		/// <summary>
 		/// Log a warning or error with OpenGraphGUI.
