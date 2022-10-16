@@ -56,11 +56,15 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// </summary>
 		const float singleLineTexTabSpace = 3f;
 
-		const char singleLineTexPrefix = '%';
-		const char dependentVisibleTextPrefix = '^';
+		const string labelPrefix = "*";
+		const string singleLineTexPrefix = "%";
+		const string dependentVisibleTextPrefix = "^";
+		const string linkedPropertyPrefix = "&";
 
-		MaterialEditor matEditor;
-		protected Dictionary<string, System.Action<MaterialEditor, MaterialProperty>> renderExtensions;
+		private MaterialEditor matEditor;
+		private Dictionary<string, MaterialProperty> currentLinkedProperties = new Dictionary<string, MaterialProperty>();
+
+		protected Dictionary<string, System.Action<MaterialEditor, MaterialProperty>> renderExtensions = null;
 
 		public OpenGraphGUIEditor()
 		{
@@ -99,27 +103,40 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 				if (thisProp.flags.HasFlag(MaterialProperty.PropFlags.HideInInspector))
 				{
+					//Don't draw this property since it is meant to be hidden
 					continue;
 				}
 
+				//First check if this property has a custom extension
 				if(renderExtensions != null && renderExtensions.ContainsKey(thisProp.displayName))
 				{
+					//Invoke the custom render function passed into the dictionary
 					renderExtensions[thisProp.displayName].Invoke(matEditor, thisProp);
 				}
 				else
 				{
 					var propName = thisProp.displayName;
-					//Check if this property is dependent on previous
-					if (propName.StartsWith(dependentVisibleTextPrefix.ToString()))
+
+					//Check the initial type of the property
+					if(propName.StartsWith(labelPrefix))
+					{
+						//This is a label type, so show a bold header instead of the property
+
+						//Trim the label prefix
+						propName = propName.Substring(labelPrefix.Length);
+
+						RenderLabelProperty(propName);
+					}
+					else if (propName.StartsWith(dependentVisibleTextPrefix))
 					{
 						//It is dependent, so we will conditionally render it
 
 						//Trim the dependent visible prefix
-						propName = propName.Substring(1);
+						propName = propName.Substring(dependentVisibleTextPrefix.Length);
 
 						if (lastWasPopulated)
 						{
-							RenderDependentVisibleProperty(thisProp, propName);
+							RenderDependentVisibleProperty(thisProp, propName, i);
 						}
 						else
 						{
@@ -138,13 +155,17 @@ namespace RobProductions.OpenGraphGUI.Editor
 						{
 							lastWasPopulated = true;
 						}
-						RenderVisibleProperty(thisProp, propName);
+						//Render as an "OpenGraphGUI" property; i.e. it will draw
+						RenderVisibleProperty(thisProp, propName, i);
 					}
 				}
 			}
 		}
 
-
+		/// <summary>
+		/// Render the bottom emission and instancing fields that are present
+		/// on default ShaderGraph GUIs.
+		/// </summary>
 		void RenderBottomOptions()
 		{
 			matEditor.RenderQueueField();
@@ -156,7 +177,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 		//PROPERTY RENDERING
 
-		void RenderDependentVisibleProperty(MaterialProperty v, string labelName)
+		void RenderDependentVisibleProperty(MaterialProperty v, string labelName, int index)
 		{
 			//Shift over by a small amount to show the dependency
 			EditorGUILayout.BeginHorizontal();
@@ -165,7 +186,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 			//Adjust label width to compensate
 			SetUtilityLabelWidth(dependentVisibleTabSpace);
 			//Render the property like we would any other
-			RenderVisibleProperty(v, labelName);
+			RenderVisibleProperty(v, labelName, index);
 			//Reset the label width
 			SetUtilityLabelWidth();
 
@@ -174,16 +195,22 @@ namespace RobProductions.OpenGraphGUI.Editor
 			EditorGUILayout.Space(dependentVisibleVerticalSpace);
 		}
 
-
-		void RenderVisibleProperty(MaterialProperty v, string labelName)
+		/// <summary>
+		/// Render a property which could be one of the custom OpenGraphGUI types.
+		/// Otherwise, render the default property view.
+		/// </summary>
+		/// <param name="v"></param>
+		/// <param name="labelName"></param>
+		/// <param name="index"></param>
+		void RenderVisibleProperty(MaterialProperty v, string labelName, int index)
 		{
 
-			if(labelName.StartsWith(singleLineTexPrefix.ToString()))
+			if(labelName.StartsWith(singleLineTexPrefix))
 			{
 				//This is a single line texture type
 
 				//Trim the single line tex prefix
-				labelName = labelName.Substring(1);
+				labelName = labelName.Substring(singleLineTexPrefix.Length);
 
 				EditorGUILayout.BeginHorizontal();
 				EditorGUILayout.Space(singleLineTexTabSpace);
@@ -212,9 +239,9 @@ namespace RobProductions.OpenGraphGUI.Editor
 					//thin than what we get in the ShaderGraph default GUI.
 					//This step makes it more wide to match that look.
 					var lastFieldWidth = EditorGUIUtility.fieldWidth;
-					EditorGUIUtility.fieldWidth = texFieldBoxSize;
+					SetUtilityFieldWidth(texFieldBoxSize);
 					matEditor.TextureProperty(v, v.displayName);
-					EditorGUIUtility.fieldWidth = lastFieldWidth;
+					SetUtilityFieldWidth(lastFieldWidth);
 					break;
 				default:
 					matEditor.DefaultShaderProperty(v, finalName);
@@ -224,11 +251,25 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 		}
 
+		/// <summary>
+		/// Render a bold label in this space.
+		/// </summary>
+		/// <param name="propName"></param>
+		void RenderLabelProperty(string propName)
+		{
+			EditorGUILayout.LabelField(propName, EditorStyles.boldLabel);
+		}
+
 		//EDITOR GUI
 
 		void SetUtilityLabelWidth(float offset = 0f)
 		{
 			EditorGUIUtility.labelWidth = EditorGUIUtility.currentViewWidth - rightValueBoxSize - offset;
+		}
+
+		void SetUtilityFieldWidth(float size)
+		{
+			EditorGUIUtility.fieldWidth = size;
 		}
 
 		//UTILITY
