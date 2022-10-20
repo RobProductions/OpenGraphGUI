@@ -27,7 +27,7 @@ In ShaderGraph, simply change your *"Custom Editor GUI"* setting to the named cl
 
 ### Labels & Alignment
 
-Prefix one of your properties with the star symbol (**\***) and that field will become a bold label.
+Prefix one of your properties with the **star symbol (\*)** and that field will become a bold label.
 
 Use a property called **\[Centered\]** to adjust the spacing of the Inspector fields to match the look of non-ShaderGraph default materials. Use a property called **\[RightBound\]** to return the field spacing to the default ShaderGraph look. 
 
@@ -35,11 +35,11 @@ Use a property called **\[Centered\]** to adjust the spacing of the Inspector fi
 
 ### Property Rendering Features
 
-Prefix a texture property with the percent symbol (**%**) and it will show as a single line texture property instead of the big thumbnail version. Single line textures are commonly used in the built-in materials and offer a cleaner look that takes up less space in your Inspector. 
+Prefix a texture property with the **percent symbol (%)** and it will show as a single line texture property instead of the big thumbnail version. Single line textures are commonly used in the built-in materials and offer a cleaner look that takes up less space in your Inspector. 
 
-Follow up a single-line texture property with an ampersand prefix (**&**) and the resulting property will be drawn on the same line as the texture. OpenGraphGUI calls this a "linked property", and you'll commonly find these used as "tint colors" in the default materials.
+Follow up a single-line texture property with an **ampersand prefix (&)** and the resulting property will be drawn on the same line as the texture. OpenGraphGUI calls this a "linked property", and you'll commonly find these used as "tint colors" in the default materials.
 
-Follow up any texture property with an arrow prefix (**^**) and that property will only become visible when the texture above it has been filled out by the user (not null). This is called a "dependent visible" property. You'll find this on many custom shaders that utilize a strength value, appearing only when the asociated texture is present. 
+Follow up any texture property with an **arrow prefix (^)** and that property will only become visible when the texture above it has been filled out by the user (not null). This is called a "dependent visible" property. You'll find this on many custom shaders that utilize a strength value, appearing only when the asociated texture is present. 
 
 <img width = "800" src="Documentation~/DocAssets/DependentTags.gif">
 
@@ -79,9 +79,10 @@ If you're looking to add a specific release of OpenGraphGUI, you can specify a r
 This open source project is free for all to suggest improvements, and I'm hoping that more contributors could help clean up the code and add further features as suggested by the community. These are the recommended steps to add your contribution:
 
 1. Fork the repository to your GitHub account
-2. Create a new branch or work off of your own "working branch"
-3. When your changes are complete, submit a pull request to merge your code; ideally to the "working-branch" used to test changes before main
-4. If the PR is approved, aggregate changes will eventually be merged into main and a new release tag is created
+2. Clone the code to the Assets folder in any Unity project (as long as it does not include OpenGraphGUI as a package)
+3. Create a new branch or work off of your own "working branch"
+4. When your changes are complete, submit a pull request to merge your code; ideally to the "working-branch" used to test changes before main
+5. If the PR is approved, aggregate changes will eventually be merged into main and a new release tag is created
 
 ## Credits & Details
 
