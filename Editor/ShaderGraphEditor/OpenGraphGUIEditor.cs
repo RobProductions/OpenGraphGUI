@@ -52,6 +52,11 @@ namespace RobProductions.OpenGraphGUI.Editor
 		const string dependentVisibleTextPrefix = "^";
 		const string linkedPropertyPrefix = "&";
 
+		/// <summary>
+		/// Representation of a property with the linkedPropertyPrefix.
+		/// This is used to pre-gather linked properties and display them
+		/// ahead of when we would otherwise reach them.
+		/// </summary>
 		class LinkedProperty
 		{
 			public MaterialProperty matProperty;
@@ -238,6 +243,14 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 		//PROPERTY RENDERING
 
+		/// <summary>
+		/// Render a property that is dependently visible on an above property.
+		/// These types of properties are simply tabbed over by a few pixels
+		/// to show the dependency.
+		/// </summary>
+		/// <param name="v"></param>
+		/// <param name="labelName"></param>
+		/// <param name="index"></param>
 		void RenderDependentVisibleProperty(MaterialProperty v, string labelName, int index)
 		{
 			//Shift over by a small amount to show the dependency

@@ -1,6 +1,6 @@
 {
   "name": "com.robproductions.opengraphgui",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "displayName": "Open Graph GUI",
   "description": "An open-source generic Shader GUI for use with URP ShaderGraphs. This package aims to help developers clean up the look of their Material properties while maintaining the built-in style.",
   "unity": "2020.3",
@@ -20,7 +20,7 @@
   "samples": [
     {
       "displayName": "Draw Property Extension",
-      "description": "Demonstration of how to extend the RPOpenGraphGUI and add in custom rendering for specific Material Properties.",
+      "description": "Demonstration of how to extend the RPOpenGraphGUI class and add in custom rendering for specific Material Properties.",
       "path": "Samples~/DrawPropertyExtension"
     }
   ]
