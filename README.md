@@ -11,7 +11,7 @@ The default Inspector view for ShaderGraph-based materials can be somewhat bland
 
 **OpenGraphGUI** lets you customize the appearance of your material properties right from ShaderGraph. Simply prefix your property names in the Shader's Blackboard with certain special characters, and any material using that Shader will display the custom GUI.
 
-<img width = "750" src="Documentation~/DocAssets/AllTagsScreenshot.jpg">
+<img width = "700" src="Documentation~/DocAssets/AllTagsScreen.jpg">
 
 If you're looking for a more comprehensive and feature-complete Shader GUI package, I highly recommend [Shader Graph Markdown](https://assetstore.unity.com/packages/tools/gui/shader-graph-markdown-194781) which this project is inspired from. They will be able to provide much more support and QOL features for developers needing extensive custom GUIs. The intent of OpenGraphGUI is to provide a simple open source alternative that the community is free to edit and improve as needed. 
 
@@ -23,7 +23,7 @@ If you're looking for a more comprehensive and feature-complete Shader GUI packa
 
 In ShaderGraph, simply change your *"Custom Editor GUI"* setting to the named class *RPOpenGraphGUI*, and you're all set to start prefixing!
 
-<img width = "180" src="Documentation~/DocAssets/CustomEditorGUI.jpg">
+<img width = "210" src="Documentation~/DocAssets/CustomEditorGUI.jpg">
 
 ### Labels & Alignment
 
