@@ -32,6 +32,18 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// </summary>
 		const float texFieldBoxSize = 65f;
 		/// <summary>
+		/// Heuristic for when extra field shrinking kicks in on small inspectors.
+		/// </summary>
+		const float minLabelWidthAdjustField = 320f;
+		/// <summary>
+		/// How much extra shrinking to add in small inspector situations.
+		/// </summary>
+		const float fieldAdjustExtraRatio = .15f;
+		/// <summary>
+		/// Ratio of expanded fields to inspector width
+		/// </summary>
+		const float expandedFieldRatio = .55f;
+		/// <summary>
 		/// The amount of tab spacing used when a property is dependent visible.
 		/// </summary>
 		const float dependentVisibleTabSpace = 12f;
@@ -46,6 +58,8 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 		const string centeredSpacingName = "[centered]";
 		const string rightBoundSpacingName = "[rightbound]";
+		const string maxFieldSpacingName = "[maxfield]";
+		const string minFieldSpacingName = "[minfield]";
 
 		const string labelPrefix = "*";
 		const string singleLineTexPrefix = "%";
@@ -66,7 +80,8 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 		private MaterialEditor matEditor;
 		private Dictionary<string, LinkedProperty> currentLinkedProperties = new Dictionary<string, LinkedProperty>();
-		private bool zeroWidthMode = false;
+		private bool fieldCenteredMode = false;
+		private bool fieldExpandedMode = false;
 
 		protected Dictionary<string, System.Action<MaterialEditor, MaterialProperty>> renderExtensions = null;
 
@@ -87,7 +102,8 @@ namespace RobProductions.OpenGraphGUI.Editor
 			matEditor = materialEditor;
 			Material material = materialEditor.target as Material;
 
-			zeroWidthMode = false;
+			fieldCenteredMode = false;
+			fieldExpandedMode = false;
 			SetUtilityLabelWidth();
 
 			RenderPropertiesList(properties);
@@ -159,12 +175,22 @@ namespace RobProductions.OpenGraphGUI.Editor
 					if(lowerPropName == centeredSpacingName)
 					{
 						//Use center spacing and don't render this property
-						SetZeroWidthMode(true);
+						SetFieldCenteredMode(true);
 					}
 					else if (lowerPropName == rightBoundSpacingName)
 					{
 						//Use right bound spacing and don't render this property
-						SetZeroWidthMode(false);
+						SetFieldCenteredMode(false);
+					}
+					else if (lowerPropName == maxFieldSpacingName)
+					{
+						//Use the maximum field width and don't render this property
+						SetFieldExpandedMode(true);
+					}
+					else if (lowerPropName == minFieldSpacingName)
+					{
+						//Use min field width and don't render this property
+						SetFieldExpandedMode(false);
 					}
 					else if(currentLinkedProperties.ContainsKey(propName))
 					{
@@ -347,6 +373,13 @@ namespace RobProductions.OpenGraphGUI.Editor
 					matEditor.TextureProperty(v, v.displayName);
 					SetUtilityFieldWidth(lastFieldWidth);
 					break;
+				case MaterialProperty.PropType.Range:
+					//Override for slider properties which should always show their slider
+					var lastLabel = EditorGUIUtility.labelWidth;
+					EditorGUIUtility.labelWidth = EditorGUIUtility.currentViewWidth - rightValueBoxSize - 30f;
+					matEditor.RangeProperty(v, finalName);
+					EditorGUIUtility.labelWidth = lastLabel;
+					break;
 				default:
 					matEditor.DefaultShaderProperty(v, finalName);
 					break;
@@ -367,31 +400,65 @@ namespace RobProductions.OpenGraphGUI.Editor
 		//EDITOR GUI
 
 		/// <summary>
-		/// Set whether to use centered or right bound spacing in the GUI.
+		/// Set whether to use centered or right bound field spacing in the GUI.
 		/// </summary>
 		/// <param name="v"></param>
-		void SetZeroWidthMode(bool v)
+		void SetFieldCenteredMode(bool v)
 		{
-			zeroWidthMode = v;
+			fieldCenteredMode = v;
 			SetUtilityLabelWidth();
 		}
 
+		/// <summary>
+		/// Set whether the field should expand to fill the Inspector
+		/// (common for the Built-In materials)
+		/// Or whether it should keep fields at minimum size
+		/// (common for Shader-Graph default look).
+		/// </summary>
+		/// <param name="v"></param>
+		void SetFieldExpandedMode(bool v)
+		{
+			fieldExpandedMode = v;
+			SetUtilityLabelWidth();
+		}
+
+		/// <summary>
+		/// Set the label width (main layout logic)
+		/// </summary>
+		/// <param name="offset"></param>
 		void SetUtilityLabelWidth(float offset = 0f)
 		{
-			if(zeroWidthMode)
+			if(fieldCenteredMode)
 			{
 				//Set the width to "default"
 				//Which seems to be how the non-ShaderGraph built-in URP materials are handled
 				EditorGUIUtility.labelWidth = 0f;
+				if (fieldExpandedMode)
+				{
+					EditorGUIUtility.fieldWidth = (EditorGUIUtility.currentViewWidth * expandedFieldRatio) - offset;
+					if(EditorGUIUtility.currentViewWidth < minLabelWidthAdjustField)
+					{
+						EditorGUIUtility.fieldWidth -= EditorGUIUtility.currentViewWidth * fieldAdjustExtraRatio;
+					}
+				}
+				else
+				{
+					EditorGUIUtility.fieldWidth = rightValueBoxSize * .6f;
+				}
 			}
 			else
 			{
 				//Set the width of the left side to be current size minus some constant pixel value
 				//This seems to be how the default ShaderGUI for ShaderGraphs is handled
 				EditorGUIUtility.labelWidth = EditorGUIUtility.currentViewWidth - rightValueBoxSize - offset;
+				EditorGUIUtility.fieldWidth = 0f;
 			}
 		}
 
+		/// <summary>
+		/// Set the override field width for special situations
+		/// </summary>
+		/// <param name="size"></param>
 		void SetUtilityFieldWidth(float size)
 		{
 			EditorGUIUtility.fieldWidth = size;

@@ -23,7 +23,7 @@ If you're looking for a more comprehensive and feature-complete Shader GUI packa
 
 In ShaderGraph, simply change your *"Custom Editor GUI"* setting to the named class *RPOpenGraphGUI*, and you're all set to start prefixing!
 
-<img width = "210" src="Documentation~/DocAssets/CustomEditorGUI.jpg">
+<img width = "250" src="Documentation~/DocAssets/CustomEditorGUI.jpg">
 
 ### Labels & Alignment
 
@@ -32,6 +32,10 @@ Prefix one of your properties with the **star symbol (\*)** and that field will 
 Use a property called **\[Centered\]** to adjust the spacing of the Inspector fields to match the look of non-ShaderGraph default materials. Use a property called **\[RightBound\]** to return the field spacing to the default ShaderGraph look. 
 
 <img width = "800" src="Documentation~/DocAssets/AlignmentTags.gif">
+
+**New!** When in the **\[Centered\]** mode, use a property called **\[MaxField\]** to let the field take up more width in the inspector. This look is meant to match the "expanded" feel of color tints for single-line textures and improve the accessibility of fields by making them easier to edit. Use a property called **\[MinField\]** to return to the small field style. 
+
+<img width = "500" src="Documentation~/DocAssets/FieldWidthScreenshot.jpg">
 
 ### Property Rendering Features
 
