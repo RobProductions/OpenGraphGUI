@@ -18,7 +18,7 @@ public class RPOpenGraphGUIExtension : RPOpenGraphGUI
 	/// There is one property which we can override to add our extension.
 	/// This is done from within the constructor to improve performance.
 	/// </summary>
-	public RPOpenGraphGUIExtension()
+	public RPOpenGraphGUIExtension() : base()
 	{
 		//First initialize the property
 		renderExtensions = new Dictionary<string, System.Action<MaterialEditor, MaterialProperty>>();

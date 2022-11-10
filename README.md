@@ -9,7 +9,7 @@ The default Inspector view for ShaderGraph-based materials can be somewhat bland
 
 ## Why use OpenGraphGUI?
 
-**OpenGraphGUI** lets you customize the appearance of your material properties right from ShaderGraph. Simply prefix your property names in the Shader's Blackboard with certain special characters, and any material using that Shader will display the custom GUI.
+**OpenGraphGUI** lets you customize the appearance of your material properties right from ShaderGraph. Simply prefix your property names in the Shader's Blackboard with certain special characters, and any material using that Shader will display the custom GUI. This is a lightweight and easy to use script that provides more control over the design of your Shaders.
 
 <img width = "700" src="Documentation~/DocAssets/AllTagsScreen.jpg">
 
@@ -36,6 +36,10 @@ Use a property called **\[Centered\]** to adjust the spacing of the Inspector fi
 **New!** When in the **\[Centered\]** mode, use a property called **\[MaxField\]** to let the field take up more width in the inspector. This look is meant to match the "expanded" feel of color tints for single-line textures and improve the accessibility of fields by making them easier to edit. Use a property called **\[MinField\]** to return to the small field style. 
 
 <img width = "500" src="Documentation~/DocAssets/FieldWidthScreenshot.jpg">
+
+**New!** Use the **hashtag symbol (#)** as a prefix for one of your properties and you will create a Foldout Group with your property name as the title. Create up to 128 unique foldout groups by creating new foldout properties in sequence without having to tag the end of each group. If you do wish to close the previous Foldout Group, simply create a property that consists of only a **hashtag symbol (#)** without any name. The following properties will exist outside of the last group. 
+
+<img width = "550" src="Documentation~/DocAssets/FoldoutGroupsScreenshot.jpg">
 
 ### Property Rendering Features
 
