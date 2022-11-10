@@ -55,6 +55,10 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// Amount of tab spacing for single line texture property.
 		/// </summary>
 		const float singleLineTexTabSpace = 2f;
+		/// <summary>
+		/// Amount of spacing above label properties.
+		/// </summary>
+		const float labelTopSpace = 4f;
 
 		const string centeredSpacingName = "[centered]";
 		const string rightBoundSpacingName = "[rightbound]";
@@ -62,6 +66,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 		const string minFieldSpacingName = "[minfield]";
 
 		const string labelPrefix = "*";
+		const string foldoutPrefix = "#";
 		const string singleLineTexPrefix = "%";
 		const string dependentVisibleTextPrefix = "^";
 		const string linkedPropertyPrefix = "&";
@@ -83,11 +88,26 @@ namespace RobProductions.OpenGraphGUI.Editor
 		private bool fieldCenteredMode = false;
 		private bool fieldExpandedMode = false;
 
+		private bool hadOneFoldout = false;
+		private bool currentlyInFoldout = false;
+		private int currentFoldoutIndex = 0;
+		private bool bottomOptionsFoldout = true;
+
+		/// <summary>
+		/// Bool list for each foldout encountered. Supports up to 128 foldouts.
+		/// </summary>
+		private bool[] foldoutArray = new bool[128];
+
 		protected Dictionary<string, System.Action<MaterialEditor, MaterialProperty>> renderExtensions = null;
 
 		public OpenGraphGUIEditor()
 		{
 			renderExtensions = null;
+			for(int i = 0; i < foldoutArray.Length; i++)
+			{
+				//Initialize foldouts to show by default
+				foldoutArray[i] = true;
+			}
 		}
 
 		//BASE GUI STRUCTURE
@@ -104,6 +124,8 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 			fieldCenteredMode = false;
 			fieldExpandedMode = false;
+			hadOneFoldout = false;
+			currentlyInFoldout = false;
 			SetUtilityLabelWidth();
 
 			RenderPropertiesList(properties);
@@ -120,6 +142,9 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// <param name="properties"></param>
 		void RenderPropertiesList(MaterialProperty[] properties)
 		{
+			//Track count of foldouts encountered
+			int foldoutCount = 0;
+
 			//Track if the last property was non-texture type or
 			//contained a non-null input texture
 			bool lastWasPopulated = true;
@@ -147,7 +172,16 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 					currentLinkedProperties.Add(thisProp.displayName, link);
 				}
+				else if (thisProp.displayName.StartsWith(foldoutPrefix))
+				{
+					//This is a foldout property
+
+					foldoutCount++;
+				}
 			}
+
+			//Reset current foldout to 0
+			currentFoldoutIndex = 0;
 
 			//Now iterate across the properties for real and render them
 			for (int i = 0; i < properties.Length; i++)
@@ -192,7 +226,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 						//Use min field width and don't render this property
 						SetFieldExpandedMode(false);
 					}
-					else if(currentLinkedProperties.ContainsKey(propName))
+					else if(currentLinkedProperties.ContainsKey(propName) && DoRenderProp())
 					{
 						//This is a linked property, so check if it was rendered already
 						var thisLinkedProp = currentLinkedProperties[propName];
@@ -210,7 +244,51 @@ namespace RobProductions.OpenGraphGUI.Editor
 							RenderVisibleProperty(thisLinkedProp.matProperty, propName, i);
 						}
 					}
-					else if(propName.StartsWith(labelPrefix))
+					else if (propName.StartsWith(foldoutPrefix))
+					{
+						//This is a foldout type, so create a new group
+
+						//Trim the foldout prefix
+						propName = propName.Substring(foldoutPrefix.Length);
+						if(propName.Trim().Length > 0)
+						{
+							//There is a foldout name to use
+
+							if(currentlyInFoldout)
+							{
+								//Stop the previous foldout
+								EditorGUILayout.EndFoldoutHeaderGroup();
+							}
+
+							//Update the current foldout index to the new value before setting it
+							currentFoldoutIndex++;
+							//This is done first so that later on, DoRenderProp() can tell if the last foldout is unfolded,
+							//While still allowing this value to change when it encountered a new foldout.
+
+							//This actually means the first item (0) will be skipped
+							//But that's okay because it is never referenced.
+
+							//Render the foldout
+							foldoutArray[currentFoldoutIndex] = EditorGUILayout.BeginFoldoutHeaderGroup(foldoutArray[currentFoldoutIndex], propName);
+
+							//Finally, track that we encountered at least one foldout
+							hadOneFoldout = true;
+							//And tell the next properties that we are in a foldout
+							currentlyInFoldout = true;
+							
+						}
+						else
+						{
+							//End the last foldout if there is one
+							if(currentlyInFoldout)
+							{
+								EditorGUILayout.EndFoldoutHeaderGroup();
+								currentlyInFoldout = false;
+							}
+						}
+						
+					}
+					else if(propName.StartsWith(labelPrefix) && DoRenderProp())
 					{
 						//This is a label type, so show a bold header instead of the property
 
@@ -219,7 +297,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 						RenderLabelProperty(propName);
 					}
-					else if (propName.StartsWith(dependentVisibleTextPrefix))
+					else if (propName.StartsWith(dependentVisibleTextPrefix) && DoRenderProp())
 					{
 						//It is dependent, so we will conditionally render it
 
@@ -235,7 +313,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 							//Don't render this property
 						}
 					}
-					else
+					else if (DoRenderProp())
 					{
 						//It's not dependent, so update populated state based on this
 						if (thisProp.type == MaterialProperty.PropType.Texture)
@@ -260,11 +338,27 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// </summary>
 		void RenderBottomOptions()
 		{
-			matEditor.RenderQueueField();
+			//If we had one foldout earlier, draw this as it's own foldout group
+			if(hadOneFoldout)
+			{
+				if(currentlyInFoldout)
+				{
+					EditorGUILayout.EndFoldoutHeaderGroup();
+				}
+				bottomOptionsFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(bottomOptionsFoldout, "Advanced");
+			}
 
-			matEditor.EnableInstancingField();
-			matEditor.DoubleSidedGIField();
-			matEditor.EmissionEnabledProperty();
+			//If we don't use the group OR we do & it's unfolded, show the options
+			if(!hadOneFoldout || bottomOptionsFoldout)
+			{
+				matEditor.RenderQueueField();
+
+				matEditor.EnableInstancingField();
+				matEditor.DoubleSidedGIField();
+				matEditor.EmissionEnabledProperty();
+				//Lightmap Emission may be a built-in only concept(?)
+				//matEditor.LightmapEmissionProperty();
+			}
 		}
 
 		//PROPERTY RENDERING
@@ -279,6 +373,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// <param name="index"></param>
 		void RenderDependentVisibleProperty(MaterialProperty v, string labelName, int index)
 		{
+
 			//Shift over by a small amount to show the dependency
 			EditorGUILayout.BeginHorizontal();
 
@@ -309,7 +404,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 		void RenderVisibleProperty(MaterialProperty v, string labelName, int index)
 		{
 
-			if(labelName.StartsWith(singleLineTexPrefix))
+			if (labelName.StartsWith(singleLineTexPrefix))
 			{
 				if(v.type == MaterialProperty.PropType.Texture)
 				{
@@ -360,6 +455,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// <param name="v"></param>
 		void RenderDefaultPropertyView(MaterialProperty v, string customName = "")
 		{
+
 			string finalName = (customName == "") ? v.displayName : customName;
 
 			switch(v.type)
@@ -394,7 +490,20 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// <param name="propName"></param>
 		void RenderLabelProperty(string propName)
 		{
+			EditorGUILayout.Space(labelTopSpace);
 			EditorGUILayout.LabelField(propName, EditorStyles.boldLabel);
+		}
+
+		//QUERY
+
+		/// <summary>
+		/// Check if we should render the current prop
+		/// based on foldout status.
+		/// </summary>
+		/// <returns></returns>
+		bool DoRenderProp()
+		{
+			return (!currentlyInFoldout || foldoutArray[currentFoldoutIndex]);
 		}
 
 		//EDITOR GUI
