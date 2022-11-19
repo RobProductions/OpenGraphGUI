@@ -1,4 +1,6 @@
 # OpenGraphGUI
+[![openupm](https://img.shields.io/npm/v/com.robproductions.opengraphgui?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.robproductions.opengraphgui/) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/RobProductions/OpenGraphGUI?logo=github)
+
 An open-source Editor GUI for use with URP ShaderGraphs in Unity, aiming to clean up the look of Material Properties while providing ease-of-use via tagging.
 
 ### Custom GUI right from ShaderGraph
