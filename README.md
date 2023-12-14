@@ -29,7 +29,7 @@ In ShaderGraph, simply change your *"Custom Editor GUI"* setting to the named cl
 
 ### Labels & Alignment
 
-> Use these naming rules to adjust the spacing of your Material's inspector and organize fields. Note that these properties are only meant to send information to OpenGraphGUI and will not be rendered, so you can use any type you prefer, though Boolean is the simplest.
+> Use these naming rules to adjust the spacing of your Material's inspector and organize fields. Note that these properties are only meant to send information to OpenGraphGUI and will not be rendered, so you can use any type you prefer. For consistency, choosing a Boolean for these properties is simplest.
 
 Prefix one of your property names with the **star symbol (\*)** and that field will become a bold label. For example, if you want a bold label with the text **"Lighting"**, use the name `*Lighting` for that property in ShaderGraph. 
 
@@ -56,6 +56,8 @@ Follow up a single-line texture property with a property that uses the **ampersa
 Follow up any texture property with a property that uses the **arrow prefix (^)** and that property will only become visible when the texture above it has been populated by the user (not null). This is called a "dependent visible" property. You'll find this on many custom shaders that utilize a strength value, appearing only when the asociated texture is present. Example name: `^MyDependentProperty`
 
 <img width = "800" src="Documentation~/DocAssets/DependentTags.gif">
+
+**NEW!** Prefix any vector property with **2~**, **3~**, or **4~** to show it as a Vector2, Vector3, or Vector4 field respectively. By default, ShaderGraph material inspectors render all vectors as Vector4, so this extra information is necessary to tell OpenGraphGUI which type you want to use. Example name: `2~MyVector2` or `3~MyVector3`
 
 ### Extensions
 
