@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using UnityEngine.UIElements;
 
 /// <summary>
 /// This is a globally accessible "wrapper" class that helps
@@ -31,6 +32,10 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// Width of the texture field on default texture property renders.
 		/// </summary>
 		const float texFieldBoxSize = 65f;
+		/// <summary>
+		/// Width of vector field on Vec2 and Vec3 property renders.
+		/// </summary>
+		const float vecFieldBoxSize = 220f;
 		/// <summary>
 		/// Heuristic for when extra field shrinking kicks in on small inspectors.
 		/// </summary>
@@ -70,6 +75,9 @@ namespace RobProductions.OpenGraphGUI.Editor
 		const string singleLineTexPrefix = "%";
 		const string dependentVisibleTextPrefix = "^";
 		const string linkedPropertyPrefix = "&";
+		const string vec2Prefix = "2~";
+		const string vec3Prefix = "3~";
+		const string vec4Prefix = "4~";
 
 		/// <summary>
 		/// Representation of a property with the linkedPropertyPrefix.
@@ -175,7 +183,6 @@ namespace RobProductions.OpenGraphGUI.Editor
 				else if (thisProp.displayName.StartsWith(foldoutPrefix))
 				{
 					//This is a foldout property
-
 					foldoutCount++;
 				}
 			}
@@ -194,7 +201,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 					continue;
 				}
 
-				//First check if this property has a custom extension
+				//Check if this property has a custom extension
 				if(renderExtensions != null && renderExtensions.ContainsKey(thisProp.displayName))
 				{
 					//Invoke the custom render function passed into the dictionary
@@ -226,7 +233,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 						//Use min field width and don't render this property
 						SetFieldExpandedMode(false);
 					}
-					else if(currentLinkedProperties.ContainsKey(propName) && DoRenderProp())
+					else if(currentLinkedProperties.ContainsKey(propName) && DoRenderFoldoutProp())
 					{
 						//This is a linked property, so check if it was rendered already
 						var thisLinkedProp = currentLinkedProperties[propName];
@@ -288,7 +295,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 						}
 						
 					}
-					else if(propName.StartsWith(labelPrefix) && DoRenderProp())
+					else if(propName.StartsWith(labelPrefix) && DoRenderFoldoutProp())
 					{
 						//This is a label type, so show a bold header instead of the property
 
@@ -297,7 +304,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 						RenderLabelProperty(propName);
 					}
-					else if (propName.StartsWith(dependentVisibleTextPrefix) && DoRenderProp())
+					else if (propName.StartsWith(dependentVisibleTextPrefix) && DoRenderFoldoutProp())
 					{
 						//It is dependent, so we will conditionally render it
 
@@ -313,7 +320,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 							//Don't render this property
 						}
 					}
-					else if (DoRenderProp())
+					else if (DoRenderFoldoutProp())
 					{
 						//It's not dependent, so update populated state based on this
 						if (thisProp.type == MaterialProperty.PropType.Texture)
@@ -403,6 +410,8 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// <param name="index"></param>
 		void RenderVisibleProperty(MaterialProperty v, string labelName, int index)
 		{
+			bool lastMixedValue = EditorGUI.showMixedValue;
+			EditorGUI.showMixedValue = v.hasMixedValue;
 
 			if (labelName.StartsWith(singleLineTexPrefix))
 			{
@@ -439,7 +448,67 @@ namespace RobProductions.OpenGraphGUI.Editor
 				{
 					//Labeled as a single line tex type, but not a texture
 					GraphLog("Property was labeled as a single line texture (" + singleLineTexPrefix
-						+ "), but not a texture type - " + labelName);
+						+ "), but not a Texture type - " + labelName);
+					RenderDefaultPropertyView(v, labelName);
+				}
+			}
+			else if(labelName.StartsWith(vec2Prefix) || labelName.StartsWith(vec3Prefix) || labelName.StartsWith(vec4Prefix))
+			{
+				if(v.type == MaterialProperty.PropType.Vector)
+				{
+					//This is a vector type
+
+					int vecCount = 2;
+					string thisPrefix = vec2Prefix;
+					if(labelName.StartsWith(vec3Prefix))
+					{
+						vecCount = 3;
+						thisPrefix = vec3Prefix;
+					}
+					else if (labelName.StartsWith(vec4Prefix))
+					{
+						vecCount = 4;
+						thisPrefix = vec4Prefix;
+					}
+
+					//Trim the vector prefix
+					labelName = labelName.Substring(thisPrefix.Length);
+
+					if(vecCount == 4)
+					{
+						RenderDefaultPropertyView(v, labelName);
+					}
+					else
+					{
+						//Render custom vector fields
+
+						//Set the label width for vectors
+						var lastLabelWidth = EditorGUIUtility.labelWidth;
+						EditorGUIUtility.labelWidth = 0f;
+
+						EditorGUI.BeginChangeCheck();
+						Vector4 vec;
+						if(vecCount == 3)
+						{
+							vec = EditorGUILayout.Vector3Field(labelName, v.vectorValue, GUILayout.ExpandWidth(true));
+						}
+						else
+						{
+							vec = EditorGUILayout.Vector2Field(labelName, v.vectorValue, GUILayout.ExpandWidth(true));
+						}
+						if (EditorGUI.EndChangeCheck())
+						{
+							v.vectorValue = vec;
+						}
+
+						EditorGUIUtility.labelWidth = lastLabelWidth;
+					}
+				}
+				else
+				{
+					//Labeled as a vector but not one
+					GraphLog("Property was labeled as a Vector (" + vec2Prefix + " or " + vec3Prefix + " or " + vec4Prefix
+						+ "), but was not a Vector type - " + labelName);
 					RenderDefaultPropertyView(v, labelName);
 				}
 			}
@@ -447,6 +516,8 @@ namespace RobProductions.OpenGraphGUI.Editor
 			{
 				RenderDefaultPropertyView(v, labelName);
 			}
+
+			EditorGUI.showMixedValue = lastMixedValue;
 		}
 
 		/// <summary>
@@ -458,6 +529,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 			string finalName = (customName == "") ? v.displayName : customName;
 
+			//Note: May want to check ShaderUtil.GetPropertyType for more complex fields
 			switch(v.type)
 			{
 				case MaterialProperty.PropType.Texture:
@@ -477,7 +549,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 					EditorGUIUtility.labelWidth = lastLabel;
 					break;
 				default:
-					matEditor.DefaultShaderProperty(v, finalName);
+					matEditor.ShaderProperty(v, finalName);
 					break;
 			}
 			
@@ -501,7 +573,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// based on foldout status.
 		/// </summary>
 		/// <returns></returns>
-		bool DoRenderProp()
+		bool DoRenderFoldoutProp()
 		{
 			return (!currentlyInFoldout || foldoutArray[currentFoldoutIndex]);
 		}
