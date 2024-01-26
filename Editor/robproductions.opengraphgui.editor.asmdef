@@ -1,7 +1,10 @@
 {
     "name": "robproductions.opengraphgui.editor",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "GUID:78bd2ddd6e276394a9615c203e574844",
+        "GUID:457756d89b35d2941b3e7b37b4ece6f1"
+    ],
     "includePlatforms": [
         "Editor"
     ],
@@ -11,6 +14,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.render-pipelines.high-definition",
+            "expression": "10.0.0",
+            "define": "RP_HAS_HIGH_DEF"
+        }
+    ],
     "noEngineReferences": false
 }
