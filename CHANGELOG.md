@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-10-5
+
+### Added
+
+- Dependent properties now work with Boolean, Float, and Vector fields
+
 ## [1.3.0] - 2023-12-14
 
 ### Added

@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-using UnityEngine.UIElements;
 
 /// <summary>
 /// This is a globally accessible "wrapper" class that helps
@@ -326,7 +325,17 @@ namespace RobProductions.OpenGraphGUI.Editor
 						if (thisProp.type == MaterialProperty.PropType.Texture)
 						{
 							var tex = thisProp.textureValue;
-							lastWasPopulated = tex != null;
+							lastWasPopulated = (tex != null);
+						}
+						else if (thisProp.type == MaterialProperty.PropType.Float)
+						{
+							var floatVal = thisProp.floatValue;
+							lastWasPopulated = (floatVal != 0.0f);
+						}
+						else if (thisProp.type == MaterialProperty.PropType.Vector)
+						{
+							var vectorVal = thisProp.vectorValue;
+							lastWasPopulated = (vectorVal.sqrMagnitude != 0.0f);
 						}
 						else
 						{
@@ -380,7 +389,6 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// <param name="index"></param>
 		void RenderDependentVisibleProperty(MaterialProperty v, string labelName, int index)
 		{
-
 			//Shift over by a small amount to show the dependency
 			EditorGUILayout.BeginHorizontal();
 
@@ -526,7 +534,6 @@ namespace RobProductions.OpenGraphGUI.Editor
 		/// <param name="v"></param>
 		void RenderDefaultPropertyView(MaterialProperty v, string customName = "")
 		{
-
 			string finalName = (customName == "") ? v.displayName : customName;
 
 			//Note: May want to check ShaderUtil.GetPropertyType for more complex fields
