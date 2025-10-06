@@ -208,7 +208,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 				if (thisProp.flags.HasFlag(MaterialProperty.PropFlags.HideInInspector))
 				{
-					Debug.Log(thisProp.name);
+					//Debug.Log(thisProp.name);
 					//Don't account for this property since it's meant to be hidden
 					continue;
 				}
