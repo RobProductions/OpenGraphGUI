@@ -454,8 +454,14 @@ namespace RobProductions.OpenGraphGUI.Editor
 						surfaceTypeProp.floatValue = (float)RenderEnumProperty((SurfaceType)surfaceTypeProp.floatValue, "Surface Type");
 						if((SurfaceType)surfaceTypeProp.floatValue == SurfaceType.Transparent)
 						{
-							blendProp.floatValue = (float)RenderEnumProperty((BlendMode)blendProp.floatValue, "Blend Mode");
-							RenderToggleProperty(blendSpecularProp, "Preserve Specular");
+							if(blendProp != null)
+							{
+								blendProp.floatValue = (float)RenderEnumProperty((BlendMode)blendProp.floatValue, "Blend Mode");
+							}
+							if(blendSpecularProp != null)
+							{
+								RenderToggleProperty(blendSpecularProp, "Preserve Specular");
+							}
 						}
 					}
 					if(alphaClipProp != null)
