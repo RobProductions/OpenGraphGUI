@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
 
 - Dependent properties now work with Boolean, Float, and Vector fields
 
+### Fixed
+
+- Fixed missing Material Override property in Unity 6
+
 ## [1.3.0] - 2023-12-14
 
 ### Added
