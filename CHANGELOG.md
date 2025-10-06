@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Fixed missing Material Override property in Unity 6
+- Attempted fix of missing Surface Options in URP 12+
 
 ## [1.3.0] - 2023-12-14
 
