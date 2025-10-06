@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System;
 
 /// <summary>
 /// This is a globally accessible "wrapper" class that helps
@@ -78,6 +79,45 @@ namespace RobProductions.OpenGraphGUI.Editor
 		const string vec3Prefix = "3~";
 		const string vec4Prefix = "4~";
 
+		public enum WorkflowMode
+		{
+			Specular,
+			Metallic
+		}
+
+		public enum SurfaceType
+		{
+			Opaque,
+			Transparent
+		}
+
+		public enum BlendMode
+		{
+			Alpha,
+			Premultiply,
+			Additive,
+			Multiply
+		}
+
+		public enum SmoothnessSource
+		{
+			SpecularAlpha,
+			BaseAlpha,
+		}
+
+		public enum RenderFace
+		{
+			Front = 2,
+			Back = 1,
+			Both = 0
+		}
+
+		public enum QueueControl
+		{
+			Auto = 0,
+			UserOverride = 1
+		}
+
 		/// <summary>
 		/// Representation of a property with the linkedPropertyPrefix.
 		/// This is used to pre-gather linked properties and display them
@@ -99,6 +139,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 		private bool currentlyInFoldout = false;
 		private int currentFoldoutIndex = 0;
 		private bool bottomOptionsFoldout = true;
+		private bool surfaceOptionsFoldout = true;
 
 		/// <summary>
 		/// Bool list for each foldout encountered. Supports up to 128 foldouts.
@@ -135,8 +176,11 @@ namespace RobProductions.OpenGraphGUI.Editor
 			currentlyInFoldout = false;
 			SetUtilityLabelWidth();
 
+			//Render the optional Material Override (Surface Options) properties
+			RenderMaterialOverrides(properties);
+			//Render the standard material properties
 			RenderPropertiesList(properties);
-
+			//Render the "advanced options"
 			RenderBottomOptions();
 		}
 
@@ -164,6 +208,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 
 				if (thisProp.flags.HasFlag(MaterialProperty.PropFlags.HideInInspector))
 				{
+					Debug.Log(thisProp.name);
 					//Don't account for this property since it's meant to be hidden
 					continue;
 				}
@@ -263,7 +308,7 @@ namespace RobProductions.OpenGraphGUI.Editor
 							if(currentlyInFoldout)
 							{
 								//Stop the previous foldout
-								EditorGUILayout.EndFoldoutHeaderGroup();
+								EndFoldout();
 							}
 
 							//Update the current foldout index to the new value before setting it
@@ -275,21 +320,14 @@ namespace RobProductions.OpenGraphGUI.Editor
 							//But that's okay because it is never referenced.
 
 							//Render the foldout
-							foldoutArray[currentFoldoutIndex] = EditorGUILayout.BeginFoldoutHeaderGroup(foldoutArray[currentFoldoutIndex], propName);
-
-							//Finally, track that we encountered at least one foldout
-							hadOneFoldout = true;
-							//And tell the next properties that we are in a foldout
-							currentlyInFoldout = true;
-							
+							foldoutArray[currentFoldoutIndex] = StartFoldout(foldoutArray[currentFoldoutIndex], propName);
 						}
 						else
 						{
 							//End the last foldout if there is one
 							if(currentlyInFoldout)
 							{
-								EditorGUILayout.EndFoldoutHeaderGroup();
-								currentlyInFoldout = false;
+								EndFoldout();
 							}
 						}
 						
@@ -359,9 +397,9 @@ namespace RobProductions.OpenGraphGUI.Editor
 			{
 				if(currentlyInFoldout)
 				{
-					EditorGUILayout.EndFoldoutHeaderGroup();
+					EndFoldout();
 				}
-				bottomOptionsFoldout = EditorGUILayout.BeginFoldoutHeaderGroup(bottomOptionsFoldout, "Advanced");
+				bottomOptionsFoldout = StartFoldout(bottomOptionsFoldout, "Advanced");
 			}
 
 			//If we don't use the group OR we do & it's unfolded, show the options
@@ -374,6 +412,69 @@ namespace RobProductions.OpenGraphGUI.Editor
 				matEditor.EmissionEnabledProperty();
 				//Lightmap Emission may be a built-in only concept(?)
 				//matEditor.LightmapEmissionProperty();
+			}
+		}
+
+		/// <summary>
+		/// In URP 12.0.0+, users have the option to change shader properties
+		/// with the Material Override setting in Shader Graph,
+		/// so render those properties if we can.
+		/// </summary>
+		void RenderMaterialOverrides(MaterialProperty[] properties)
+		{
+			//If we're supposed to show a surface option, it will be available
+			//in the properties list that was provided to us
+			var workflowProp = GetSurfaceOptionProperty("_WorkflowMode", properties);
+			var surfaceTypeProp = GetSurfaceOptionProperty("_Surface", properties);
+			var blendProp = GetSurfaceOptionProperty("_Blend", properties);
+			var blendSpecularProp = GetSurfaceOptionProperty("_BlendModePreserveSpecular", properties);
+
+			var alphaClipProp = GetSurfaceOptionProperty("_AlphaClip", properties);
+			var castShadowsProp = GetSurfaceOptionProperty("_CastShadows", properties);
+			var receiveShadowsProp = GetSurfaceOptionProperty("_ReceiveShadows", properties);
+
+			bool drawSurfaceOptions = workflowProp != null || surfaceTypeProp != null || blendProp != null
+				|| blendSpecularProp != null || alphaClipProp != null || castShadowsProp != null
+				|| receiveShadowsProp != null;
+
+			if(drawSurfaceOptions)
+			{
+				surfaceOptionsFoldout = StartFoldout(surfaceOptionsFoldout, "Surface Options");
+
+				if(surfaceOptionsFoldout)
+				{
+					SetFieldCenteredMode(true);
+					SetFieldExpandedMode(true);
+					if (workflowProp != null)
+					{
+						workflowProp.floatValue = (float)RenderEnumProperty((WorkflowMode)workflowProp.floatValue, "Workflow Mode");
+					}
+					if(surfaceTypeProp != null)
+					{
+						surfaceTypeProp.floatValue = (float)RenderEnumProperty((SurfaceType)surfaceTypeProp.floatValue, "Surface Type");
+						if((SurfaceType)surfaceTypeProp.floatValue == SurfaceType.Transparent)
+						{
+							blendProp.floatValue = (float)RenderEnumProperty((BlendMode)blendProp.floatValue, "Blend Mode");
+							RenderToggleProperty(blendSpecularProp, "Preserve Specular");
+						}
+					}
+					if(alphaClipProp != null)
+					{
+						RenderVisibleProperty(alphaClipProp, "Alpha Clip", 0);
+					}
+					if(castShadowsProp != null)
+					{
+						RenderToggleProperty(castShadowsProp, "Cast Shadows");
+					}
+					if(receiveShadowsProp != null)
+					{
+						RenderToggleProperty(receiveShadowsProp, "Receive Shadows");
+					}
+					SetFieldExpandedMode(false);
+					SetFieldCenteredMode(false);
+				}
+
+				EndFoldout();
 			}
 		}
 
@@ -573,6 +674,18 @@ namespace RobProductions.OpenGraphGUI.Editor
 			EditorGUILayout.LabelField(propName, EditorStyles.boldLabel);
 		}
 
+		T RenderEnumProperty<T>(T value, string displayName) where T : System.Enum, IConvertible
+		{
+			return (T)EditorGUILayout.EnumPopup(displayName, value);
+		}
+
+		void RenderToggleProperty(MaterialProperty prop, string label)
+		{
+			bool displayBoolValue = prop.floatValue > 0;
+			bool setBoolValue = EditorGUILayout.Toggle(label, displayBoolValue);
+			prop.floatValue = setBoolValue ? 1f : 0f;
+		}
+
 		//QUERY
 
 		/// <summary>
@@ -586,6 +699,33 @@ namespace RobProductions.OpenGraphGUI.Editor
 		}
 
 		//EDITOR GUI
+
+		/// <summary>
+		/// Starts a foldout section.
+		/// </summary>
+		/// <param name="displayFoldout"></param>
+		/// <param name="foldoutTitle"></param>
+		/// <returns></returns>
+		bool StartFoldout(bool displayFoldout, string foldoutTitle)
+		{
+			//Track that we encountered at least one foldout
+			hadOneFoldout = true;
+			//And tell the next properties in the layout that we are in a foldout
+			currentlyInFoldout = true;
+
+			return EditorGUILayout.BeginFoldoutHeaderGroup(displayFoldout, foldoutTitle);
+		}
+
+		/// <summary>
+		/// Ends a foldout section.
+		/// </summary>
+		void EndFoldout()
+		{
+			//Tell the next properties that we stopped the foldout
+			currentlyInFoldout = false;
+
+			EditorGUILayout.EndFoldoutHeaderGroup();
+		}
 
 		/// <summary>
 		/// Set whether to use centered or right bound field spacing in the GUI.
@@ -664,6 +804,18 @@ namespace RobProductions.OpenGraphGUI.Editor
 				}
 			}
 
+			return null;
+		}
+
+		MaterialProperty GetSurfaceOptionProperty(string surfaceOptionName, MaterialProperty[] properties)
+		{
+			foreach(MaterialProperty thisProp in properties)
+			{
+				if(thisProp.flags.HasFlag(MaterialProperty.PropFlags.HideInInspector) && thisProp.name == surfaceOptionName)
+				{
+					return thisProp;
+				}
+			}
 			return null;
 		}
 
